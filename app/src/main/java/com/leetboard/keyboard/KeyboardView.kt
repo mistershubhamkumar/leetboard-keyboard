@@ -27,7 +27,7 @@ class KeyboardView @JvmOverloads constructor(
     init {
         orientation = VERTICAL
         val root = LayoutInflater.from(context).inflate(R.layout.keyboard_view_root, this, true)
-        rowContainer = root.findViewById(R.id/row_container)
+        rowContainer = root.findViewById(R.id.row_container)
         render()
     }
 
@@ -198,20 +198,26 @@ class KeyboardView @JvmOverloads constructor(
     private fun getAlternatesForKey(key: String): List<String> {
         // Provide helpful long-press alternatives for English letters and Hindi consonants
         val lower = key.lowercase()
-        return when {
-            // Hindi consonant combos -> consonant + matras
-            listOf("क","ख","ग","घ","च","छ","ज","झ","ट","ठ","ड","ढ","त","थ","द","ध","न","प","फ","ब","भ","म","य","र","ल","व","श","ष","स","ह","क्ष","त्र","ज्ञ","श्र").contains(key) -> {
-                val matras = listOf("ा","ि","ी","ु","ू","े","ै","ो","ौ","ं","ः","्")
-                matras.map { m -> key + m }
-            }
-            // English accented variants
-            lower == "a" -> listOf("á","à","ä","â","ã","å")
-            lower == "e" -> listOf("é","è","ë","ê")
-            lower == "i" -> listOf("í","ì","ï","î")
-            lower == "o" -> listOf("ó","ò","ö","ô","õ")
-            lower == "u" -> listOf("ú","ù","ü","û")
-            lower == "s" -> listOf("ß")
-            lower == "c" -> listOf("ç")
+
+        val hindiConsonants = setOf(
+            "क","ख","ग","घ","च","छ","ज","झ","ट","ठ","ड","ढ","ण",
+            "त","थ","द","ध","न","प","फ","ब","भ","म","य","र","ल","व",
+            "श","ष","स","ह","क्ष","त्र","ज्ञ","श्र"
+        )
+
+        if (key in hindiConsonants) {
+            val matras = listOf("ा","ि","ी","ु","ू","े","ै","ो","ौ","ं","ः","्")
+            return matras.map { m -> key + m }
+        }
+
+        return when (lower) {
+            "a" -> listOf("á","à","ä","â","ã","å")
+            "e" -> listOf("é","è","ë","ê")
+            "i" -> listOf("í","ì","ï","î")
+            "o" -> listOf("ó","ò","ö","ô","õ")
+            "u" -> listOf("ú","ù","ü","û")
+            "s" -> listOf("ß")
+            "c" -> listOf("ç")
             else -> emptyList()
         }
     }
