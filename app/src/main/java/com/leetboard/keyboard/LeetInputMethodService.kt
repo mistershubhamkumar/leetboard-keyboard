@@ -2,7 +2,11 @@ package com.leetboard.keyboard
 
 import android.inputmethodservice.InputMethodService
 import android.view.View
-import androidx.appcompat.app.AlertDialog
+import android.widget.PopupWindow
+import android.widget.ListView
+import android.widget.ArrayAdapter
+import android.view.Gravity
+import android.view.ViewGroup
 import com.leetboard.keyboard.databinding.KeyboardViewBinding
 
 class LeetInputMethodService : InputMethodService() {
@@ -58,17 +62,32 @@ class LeetInputMethodService : InputMethodService() {
     private fun showAlternatesDialog(key: String, alternates: List<String>) {
         if (alternates.isEmpty()) return
         val items = alternates.toTypedArray()
-        val builder = AlertDialog.Builder(this)
-            .setTitle("Choose")
-            .setItems(items) { dialog, which ->
-                val selection = items[which]
-                commitAlternate(selection)
-                dialog.dismiss()
-            }
-        // AlertDialogs from a service context need a window token; use application context theme via AppCompat
-        val dialog = builder.create()
-        dialog.window?.setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_PANEL)
-        dialog.show()
+
+        // Create a simple ListView programmatically and show it in a PopupWindow.
+        val listView = ListView(this)
+        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, items)
+        listView.adapter = adapter
+
+        val popup = PopupWindow(
+            listView,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        )
+
+        listView.setOnItemClickListener { _, _, position, _ ->
+            val selection = items[position]
+            commitAlternate(selection)
+            popup.dismiss()
+        }
+
+        // Show centered over the input view. This is safer than creating a free-floating AlertDialog from a service.
+        try {
+            popup.showAtLocation(binding.root, Gravity.CENTER, 0, 0)
+        } catch (_: Exception) {
+            // Fallback: commit first alternate if popup can't be shown
+            commitAlternate(items[0])
+        }
     }
 
     private fun commitAlternate(selection: String) {
