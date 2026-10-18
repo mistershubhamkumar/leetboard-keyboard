@@ -1,25 +1,13 @@
-# LeetBoard Keyboard
+# Updated README: polished UI, long-press, icons, Play Store prep
 
-This project is a native Android Input Method Editor (IME) keyboard built in Kotlin.
+What's new:
+- Polished keyboard visuals: updated drawables, paddings, and dimens
+- Long-press on keys to access alternates (accented letters, Hindi matra combos)
+- Launcher adaptive icon and foreground vector added
+- Minor project cleanup to prepare for Play Store submission (adaptive icons, stable package name)
 
-## Features
-- ENGLISH QWERTY mode
-- HINDI Devanagari keyboard mode
-- LEETSPEAK mode with dictionary-based conversion
-- Material-styled modern keyboard UI
-- SharedPreferences-based custom rules editor
-- IME configuration and system keyboard enablement guidance
-
-## Setup
-1. Open the project in Android Studio.
-2. Let Gradle sync complete.
-3. Build and run on a device or emulator.
-4. Go to Settings → Languages & Input → On-screen keyboard → Manage keyboards.
-5. Enable LeetBoard Keyboard.
-6. Choose LeetBoard Keyboard as the current keyboard.
-7. Use the mode key on the keyboard to switch between EN, हिंदी, and 1337.
-
-## Notes
-- Custom leet rules can be edited from the included SettingsActivity.
-- The app uses SharedPreferences and JSON to persist user-defined char/word rules.
-- The IME is declared in `AndroidManifest.xml` and `res/xml/method.xml`.
+Next steps before publishing:
+1. Provide high-res launcher assets (play store needs screenshots & feature graphic).
+2. Configure Play Store signing or upload key in the Play Console.
+3. Update versionCode/versionName in app/build.gradle.kts for releases.
+4. Run full QA on multiple Android versions and device sizes.

@@ -27,7 +27,7 @@ class KeyboardView @JvmOverloads constructor(
     init {
         orientation = VERTICAL
         val root = LayoutInflater.from(context).inflate(R.layout.keyboard_view_root, this, true)
-        rowContainer = root.findViewById(R.id.row_container)
+        rowContainer = root.findViewById(R.id/row_container)
         render()
     }
 
@@ -52,7 +52,7 @@ class KeyboardView @JvmOverloads constructor(
         render()
     }
 
-    private fun dp(value: Number): Int = (value.toFloat() * density).roundToInt()
+    private fun dp(value: Number): Int = (value.toFloat() * density).toInt()
 
     private fun clearRows() {
         rowContainer.removeAllViews()
@@ -168,23 +168,52 @@ class KeyboardView @JvmOverloads constructor(
 
     private fun addKeyRow(keys: List<String>) {
         val row = createRow()
-        val scroll = HorizontalScrollView(context).apply {
-            isHorizontalScrollBarEnabled = false
-        }
+        val scroll = HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false }
         val inner = LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER
         }
 
         for (key in keys) {
-            val btn = makeKeyButton(if (shiftOn) key.uppercase() else key)
+            val label = if (shiftOn) key.uppercase() else key
+            val btn = makeKeyButton(label)
             btn.setOnClickListener { listener?.onKeyPress(key) }
+
+            btn.setOnLongClickListener {
+                val alternates = getAlternatesForKey(key)
+                if (alternates.isNotEmpty()) {
+                    listener?.onKeyLongPress(key, alternates)
+                    true
+                } else false
+            }
+
             inner.addView(btn)
         }
 
         scroll.addView(inner)
         row.addView(scroll)
         rowContainer.addView(row)
+    }
+
+    private fun getAlternatesForKey(key: String): List<String> {
+        // Provide helpful long-press alternatives for English letters and Hindi consonants
+        val lower = key.lowercase()
+        return when {
+            // Hindi consonant combos -> consonant + matras
+            listOf("क","ख","ग","घ","च","छ","ज","झ","ट","ठ","ड","ढ","त","थ","द","ध","न","प","फ","ब","भ","म","य","र","ल","व","श","ष","स","ह","क्ष","त्र","ज्ञ","श्र").contains(key) -> {
+                val matras = listOf("ा","ि","ी","ु","ू","े","ै","ो","ौ","ं","ः","्")
+                matras.map { m -> key + m }
+            }
+            // English accented variants
+            lower == "a" -> listOf("á","à","ä","â","ã","å")
+            lower == "e" -> listOf("é","è","ë","ê")
+            lower == "i" -> listOf("í","ì","ï","î")
+            lower == "o" -> listOf("ó","ò","ö","ô","õ")
+            lower == "u" -> listOf("ú","ù","ü","û")
+            lower == "s" -> listOf("ß")
+            lower == "c" -> listOf("ç")
+            else -> emptyList()
+        }
     }
 
     private fun createRow(): LinearLayout {
@@ -216,5 +245,6 @@ class KeyboardView @JvmOverloads constructor(
         fun onKeyPress(key: String)
         fun onModeSwitch()
         fun onShiftToggle()
+        fun onKeyLongPress(key: String, alternates: List<String>)
     }
 }

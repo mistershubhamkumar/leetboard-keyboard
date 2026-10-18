@@ -2,6 +2,7 @@ package com.leetboard.keyboard
 
 import android.inputmethodservice.InputMethodService
 import android.view.View
+import androidx.appcompat.app.AlertDialog
 import com.leetboard.keyboard.databinding.KeyboardViewBinding
 
 class LeetInputMethodService : InputMethodService() {
@@ -14,9 +15,7 @@ class LeetInputMethodService : InputMethodService() {
     private var shiftOn: Boolean = false
     private val composingRaw = StringBuilder()
 
-    enum class Mode {
-        EN, HI, LEET
-    }
+    enum class Mode { EN, HI, LEET }
 
     override fun onCreate() {
         super.onCreate()
@@ -45,11 +44,56 @@ class LeetInputMethodService : InputMethodService() {
                 shiftOn = !shiftOn
                 keyboardView.setShift(shiftOn)
             }
+
+            override fun onKeyLongPress(key: String, alternates: List<String>) {
+                showAlternatesDialog(key, alternates)
+            }
         })
 
         keyboardView.setMode(currentMode.name)
         keyboardView.setShift(shiftOn)
         return binding.root
+    }
+
+    private fun showAlternatesDialog(key: String, alternates: List<String>) {
+        if (alternates.isEmpty()) return
+        val items = alternates.toTypedArray()
+        val builder = AlertDialog.Builder(this)
+            .setTitle("Choose")
+            .setItems(items) { dialog, which ->
+                val selection = items[which]
+                commitAlternate(selection)
+                dialog.dismiss()
+            }
+        // AlertDialogs from a service context need a window token; use application context theme via AppCompat
+        val dialog = builder.create()
+        dialog.window?.setType(android.view.WindowManager.LayoutParams.TYPE_APPLICATION_PANEL)
+        dialog.show()
+    }
+
+    private fun commitAlternate(selection: String) {
+        val ic = currentInputConnection ?: return
+        when (currentMode) {
+            Mode.EN -> ic.commitText(if (shiftOn) selection.uppercase() else selection, 1)
+            Mode.HI -> ic.commitText(selection, 1)
+            Mode.LEET -> {
+                // If composing raw exists and selection is letter-like, append to composing.
+                val isWord = selection.any { it.isLetterOrDigit() }
+                if (isWord) {
+                    composingRaw.append(selection)
+                    val converted = leetConverter.applyCharRulesToWord(composingRaw.toString())
+                    currentInputConnection.setComposingText(converted, 1)
+                } else {
+                    if (composingRaw.isNotEmpty()) {
+                        val final = leetConverter.convertToLeet(composingRaw.toString())
+                        ic.commitText(final + selection, 1)
+                        composingRaw.clear()
+                    } else {
+                        ic.commitText(selection, 1)
+                    }
+                }
+            }
+        }
     }
 
     private fun clearComposing() {
@@ -65,11 +109,7 @@ class LeetInputMethodService : InputMethodService() {
                 if (composingRaw.isNotEmpty()) {
                     composingRaw.deleteCharAt(composingRaw.length - 1)
                     val converted = leetConverter.applyCharRulesToWord(composingRaw.toString())
-                    if (converted.isEmpty()) {
-                        ic.finishComposingText()
-                    } else {
-                        ic.setComposingText(converted, 1)
-                    }
+                    if (converted.isEmpty()) ic.finishComposingText() else ic.setComposingText(converted, 1)
                 } else {
                     ic.deleteSurroundingText(1, 0)
                 }
@@ -80,9 +120,7 @@ class LeetInputMethodService : InputMethodService() {
                     val final = leetConverter.convertToLeet(composingRaw.toString())
                     ic.commitText(final + " ", 1)
                     composingRaw.clear()
-                } else {
-                    ic.commitText(" ", 1)
-                }
+                } else ic.commitText(" ", 1)
             }
 
             "enter" -> {
@@ -99,40 +137,23 @@ class LeetInputMethodService : InputMethodService() {
                 clearComposing()
             }
 
-            "shift" -> {
-                shiftOn = !shiftOn
-                keyboardView.setShift(shiftOn)
-            }
-
             else -> {
                 when (currentMode) {
-                    Mode.EN -> {
-                        val out = if (shiftOn) key.uppercase() else key
-                        ic.commitText(out, 1)
-                    }
-                    Mode.HI -> {
-                        ic.commitText(key, 1)
-                    }
+                    Mode.EN -> ic.commitText(if (shiftOn) key.uppercase() else key, 1)
+                    Mode.HI -> ic.commitText(key, 1)
                     Mode.LEET -> {
-                        if (key.isBlank()) {
-                            ic.commitText(key, 1)
-                            return
-                        }
-
                         val isWordChar = key.any { it.isLetterOrDigit() }
                         if (!isWordChar) {
                             if (composingRaw.isNotEmpty()) {
                                 val final = leetConverter.convertToLeet(composingRaw.toString())
                                 ic.commitText(final + key, 1)
                                 composingRaw.clear()
-                            } else {
-                                ic.commitText(key, 1)
-                            }
+                            } else ic.commitText(key, 1)
                         } else {
-                            val applied = if (shiftOn) key.uppercase() else key
-                            composingRaw.append(applied)
-                            val converted = leetConverter.applyCharRulesToWord(composingRaw.toString())
-                            ic.setComposingText(converted, 1)
+                            val appendChar = if (shiftOn) key.uppercase() else key
+                            composingRaw.append(appendChar)
+                            val composingConverted = leetConverter.applyCharRulesToWord(composingRaw.toString())
+                            ic.setComposingText(composingConverted, 1)
                         }
                     }
                 }
